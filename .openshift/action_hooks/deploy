@@ -1,0 +1,66 @@
+#!/bin/bash
+# This deploy hook gets executed after dependencies are resolved and the
+# build hook has been run but before the application has been started back
+# up again.  This script gets executed directly, so it could be python, php,
+# ruby, etc.
+
+set -e
+
+DRUPAL_DIR=${OPENSHIFT_REPO_DIR}web
+DRUPAL_SETTINGS=${DRUPAL_DIR}/sites/default/settings.php
+
+if [ ! -d "${DRUPAL_DIR}" ]
+then
+  echo "No Drupal directory found."
+  exit 9
+fi
+
+#
+# Create a new Drupal settings.php file.
+#
+if [ ! -f "${DRUPAL_DIR}/sites/default/settings.php" ]
+then
+
+  #
+  # Drupal requires mysql.
+  # 
+  if [ -z "$OPENSHIFT_MYSQL_DB_HOST" ]
+  then
+      echo 1>&2
+      echo "Could not find mysql database. Please run:" 1>&2
+      echo "rhc cartridge add mysql -a $OPENSHIFT_APP_NAME" 1>&2
+      echo "then make a sample commit (add whitespace somewhere) and re-push" 1>&2
+      echo 1>&2
+  fi
+
+  if [ -z "$OPENSHIFT_MYSQL_DB_HOST" ]
+  then
+      exit 5
+  fi
+  if [ -z "$OPENSHIFT_MYSQL_DB_PORT" ]
+  then
+      exit 6
+  fi
+
+  mkdir -p ${DRUPAL_DIR}/sites/default
+  mkdir -p ${OPENSHIFT_DATA_DIR}files
+  mkdir -p ${OPENSHIFT_DATA_DIR}private
+  mkdir -p ${OPENSHIFT_DATA_DIR}public
+
+  if [ -d "${DRUPAL_DIR}/files" ]
+  then
+    echo "Files directory is already existing! Do not commit the web/files directory."
+    exit 9
+  fi
+
+  ln -s ${OPENSHIFT_DATA_DIR}files ${DRUPAL_DIR}/files
+  ln -s ${DRUPAL_DIR}/sites/default/settings.live.php ${DRUPAL_DIR}/sites/default/settings.php
+
+  echo
+  echo "Drupal directories are now configured"
+  echo
+  echo "===================================================="
+else
+  echo "Drupal directories are already configured.  Delete settings.php on the server to rerun setup."
+fi
+echo

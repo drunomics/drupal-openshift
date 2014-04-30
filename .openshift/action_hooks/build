@@ -1,0 +1,28 @@
+#!/bin/bash
+# This is a simple build script and will be executed on your CI system if 
+# available.  Otherwise it will execute while your application is stopped
+# before the deploy step.  This script gets executed directly, so it
+# could be python, php, ruby, etc. 
+
+set -e
+
+DRUPAL_DIR=${OPENSHIFT_REPO_DIR}web
+
+if [ ! -d "${DRUPAL_DIR}" ]
+then
+  echo "No Drupal directory found. Make sure ./web is created."
+  exit 9
+fi
+
+# Drush settings
+cat >$OPENSHIFT_HOMEDIR/.drush/drushrc.php <<EOF
+<?php
+  \$options['uri'] = \$_ENV['OPENSHIFT_APP_DNS'];
+  \$options['root'] = \$_ENV['OPENSHIFT_REPO_DIR'].'web';
+EOF
+
+
+#
+# Ensure there is a default health check
+#
+cp ${OPENSHIFT_REPO_DIR}.openshift/health_check.php ${DRUPAL_DIR}
